@@ -385,6 +385,15 @@ void pltsql_drop_relation_refcnt_hook(Relation relation)
 	}
 }
 
+Oid
+get_sys_nsp_oid()
+{
+	if (!OidIsValid(sys_schema_oid))
+		sys_schema_oid = get_namespace_oid(BBF_SYS_NSP, false);
+
+	return sys_schema_oid;
+}
+
 /*****************************************
  *			SYSDATABASES
  *****************************************/

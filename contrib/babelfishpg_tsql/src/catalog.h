@@ -32,7 +32,9 @@ extern void pltsql_drop_relation_refcnt_hook(Relation relation);
 /*****************************************
  *			SYS schema
  *****************************************/
+#define BBF_SYS_NSP "sys"
 extern Oid	sys_schema_oid;
+extern Oid  get_sys_nsp_oid(void);
 
 /*****************************************
  *			SYSDATABASES
