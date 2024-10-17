@@ -571,6 +571,7 @@ replicate
 space
 SELECT_INTO_TEST
 binary-datatype-operators
+securityadmin_role
 sys_dm_os_sys_info
 cast-varchar-to-time
 xml_exist
