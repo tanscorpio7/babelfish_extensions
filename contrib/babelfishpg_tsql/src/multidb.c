@@ -1226,9 +1226,7 @@ get_physical_schema_name_by_mode(char *db_name, const char *schema_name, Migrati
 
 	if (SINGLE_DB == mode)
 	{
-		if ((strlen(db_name) == 6 && (strncmp(db_name, "master", 6) == 0)) ||
-			(strlen(db_name) == 6 && (strncmp(db_name, "tempdb", 6) == 0)) ||
-			(strlen(db_name) == 4 && (strncmp(db_name, "msdb", 4) == 0)))
+		if (IS_BBF_BUILT_IN_DB(db_name))
 		{
 			result = palloc0(MAX_BBF_NAMEDATALEND);
 

@@ -233,7 +233,7 @@ add_fixed_user_roles_to_bbf_authid_user_ext(const char *dbname)
 	 * For master, tempdb and msdb databases, the guest user will be
 	 * enabled by default
 	 */
-	if (strcmp(dbname, "master") == 0 || strcmp(dbname, "tempdb") == 0 || strcmp(dbname, "msdb") == 0)
+	if (IS_BBF_BUILT_IN_DB(dbname))
 		add_to_bbf_authid_user_ext(guest, "guest", dbname, "guest", NULL, false, true, false);
 	else
 		add_to_bbf_authid_user_ext(guest, "guest", dbname, "guest", NULL, false, false, false);
@@ -689,9 +689,7 @@ drop_bbf_db(const char *dbname, bool missing_ok, bool force_drop)
 	bool               is_set_userid = false;
 	Oid                save_userid;
 
-	if ((strlen(dbname) == 6 && (strncmp(dbname, "master", 6) == 0)) ||
-		((strlen(dbname) == 6 && strncmp(dbname, "tempdb", 6) == 0)) ||
-		(strlen(dbname) == 4 && (strncmp(dbname, "msdb", 4) == 0)))
+	if (IS_BBF_BUILT_IN_DB(dbname))
 	{
 		if (!force_drop)
 			ereport(ERROR,

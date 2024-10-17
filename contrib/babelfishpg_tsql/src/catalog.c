@@ -450,13 +450,12 @@ get_one_user_db_name(void)
 		db_name = TextDatumGetCString(name);
 
 		/* check that db_name is not "master", "tempdb", or "msdb" */
-		if ((strlen(db_name) != 6 || (strncmp(db_name, "master", 6) != 0)) &&
-			(strlen(db_name) != 6 || (strncmp(db_name, "tempdb", 6) != 0)) &&
-			(strlen(db_name) != 4 || (strncmp(db_name, "msdb", 4) != 0)))
+		if (!IS_BBF_BUILT_IN_DB(db_name))
 		{
 			user_db_name = db_name;
 			break;
 		}
+		pfree(db_name);
 		tuple = heap_getnext(scan, ForwardScanDirection);
 	}
 
