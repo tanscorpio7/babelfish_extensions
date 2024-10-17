@@ -1924,56 +1924,6 @@ FROM pg_catalog.pg_class t1
 	JOIN information_schema.table_privileges t4 ON t1.relname = t4.table_name
 WHERE t4.privilege_type = 'DELETE'; 
 
-CREATE OR REPLACE FUNCTION is_srvrolemember(role sys.SYSNAME, login sys.SYSNAME DEFAULT suser_name())
-RETURNS INTEGER AS
-$$
-DECLARE has_role BOOLEAN;
-DECLARE login_valid BOOLEAN;
-BEGIN
-	role  := TRIM(trailing from LOWER(role));
-	login := TRIM(trailing from LOWER(login));
-	
-	login_valid = (login = suser_name() COLLATE sys.database_default) OR 
-		(EXISTS (SELECT name
-	 			FROM sys.server_principals
-		 	 	WHERE 
-				LOWER(name) = login COLLATE sys.database_default
-				AND type = 'S'));
- 	
- 	IF NOT login_valid THEN
- 		RETURN NULL;
-    
-    ELSIF role = 'public' COLLATE sys.database_default THEN
-    	RETURN 1;
-	
- 	ELSIF role = 'sysadmin' COLLATE sys.database_default THEN
-	  	has_role = pg_has_role(login::TEXT, role::TEXT, 'MEMBER');
-	    IF has_role THEN
-			RETURN 1;
-		ELSE
-			RETURN 0;
-		END IF;
-	
-    ELSIF role COLLATE sys.database_default IN (
-            'serveradmin',
-            'securityadmin',
-            'setupadmin',
-            'securityadmin',
-            'processadmin',
-            'dbcreator',
-            'diskadmin',
-            'bulkadmin') THEN 
-    	RETURN 0;
- 	
-    ELSE
- 		  RETURN NULL;
- 	END IF;
-	
- 	EXCEPTION WHEN OTHERS THEN
-	 	  RETURN NULL;
-END;
-$$ LANGUAGE plpgsql STABLE;
-
 CREATE OR REPLACE PROCEDURE sys.sp_helpuser("@name_in_db" sys.SYSNAME = NULL) AS
 $$
 BEGIN
@@ -2086,7 +2036,6 @@ BEGIN
 END;
 $$
 LANGUAGE 'pltsql';
-
 
 create or replace view sys.types As
 with RECURSIVE type_code_list as
