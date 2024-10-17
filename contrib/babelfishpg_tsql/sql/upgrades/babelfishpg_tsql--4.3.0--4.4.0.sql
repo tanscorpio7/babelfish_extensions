@@ -71,13 +71,13 @@ END;
 $$;
 
 
-CREATE OR REPLACE PROCEDURE sys.babel_create_database_roles()
+CREATE OR REPLACE PROCEDURE sys.create_db_roles_during_upgrade()
 LANGUAGE C
-AS 'babelfishpg_tsql', 'create_database_roles_for_all_dbs';
+AS 'babelfishpg_tsql', 'create_db_roles_during_upgrade';
 
-CALL sys.babel_create_database_roles();
+CALL sys.create_db_roles_during_upgrade();
 
-DROP PROCEDURE sys.babel_create_database_roles();
+DROP PROCEDURE sys.create_db_roles_during_upgrade();
 
 DO
 LANGUAGE plpgsql

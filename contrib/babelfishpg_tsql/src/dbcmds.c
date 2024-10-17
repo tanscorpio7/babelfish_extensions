@@ -1343,9 +1343,9 @@ create_db_roles_if_not_exists(const char *dbname, List *parsetree_list)
 * This function is only being used during upgrade to v4.4.0
 * to create database roles db_accessadmin for each database
 */
-PG_FUNCTION_INFO_V1(create_database_roles_for_all_dbs);
+PG_FUNCTION_INFO_V1(create_db_roles_during_upgrade);
 Datum
-create_database_roles_for_all_dbs(PG_FUNCTION_ARGS)
+create_db_roles_during_upgrade(PG_FUNCTION_ARGS)
 {
 	Relation          sysdatabase_rel;
 	TableScanDesc     scan;
@@ -1359,7 +1359,7 @@ create_database_roles_for_all_dbs(PG_FUNCTION_ARGS)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				 errmsg("%s can only be called from an SQL script executed by CREATE/ALTER EXTENSION",
-						"create_database_roles_for_all_dbs()")));
+						"create_db_roles_during_upgrade()")));
 
 	pltsql_save_nestlevel = pltsql_new_guc_nest_level();
 	save_nestlevel = NewGUCNestLevel();
