@@ -1,5 +1,4 @@
 -- BBF_SYSDATABASES
--- Note: change here requires change in FormData_sysdatabases too
 CREATE TABLE sys.babelfish_sysdatabases (
 	dbid SMALLINT NOT NULL UNIQUE,
 	status INT NOT NULL,
@@ -324,7 +323,6 @@ END
 $$;
 
 -- LOGIN EXT
--- Note: change here requires change in FormData_authid_login_ext too
 CREATE TABLE sys.babelfish_authid_login_ext (
 rolname NAME NOT NULL, -- pg_authid.rolname
 is_disabled INT NOT NULL DEFAULT 0, -- to support enable/disable login
