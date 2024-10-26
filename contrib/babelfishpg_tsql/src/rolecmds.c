@@ -1029,9 +1029,10 @@ drop_all_logins(PG_FUNCTION_ARGS)
 	/* Get all the login names beforehand. */
 	while (HeapTupleIsValid(tuple = systable_getnext(scan)))
 	{
-		Form_authid_login_ext loginform = (Form_authid_login_ext) GETSTRUCT(tuple);
-
-		rolname = NameStr(loginform->rolname);
+		bool  isNull;
+		Datum datum = heap_getattr(tuple, Anum_bbf_authid_login_ext_rolname,
+								   RelationGetDescr(bbf_authid_login_ext_rel), &isNull);
+		rolname = pstrdup(NameStr(*DatumGetName(datum)));
 
 		/*
 		 * Remove SA from authid_login_ext now but do not add it to the list
@@ -2519,10 +2520,10 @@ remove_createrole_from_logins(PG_FUNCTION_ARGS)
 
 	while (HeapTupleIsValid(tuple))
 	{
-		Form_authid_login_ext loginform;
-		char *rolname;
-		loginform = (Form_authid_login_ext) GETSTRUCT(tuple);
-		rolname = pstrdup(NameStr(loginform->rolname));
+		bool  isNull;
+		Datum datum = heap_getattr(tuple, Anum_bbf_authid_login_ext_rolname,
+								   RelationGetDescr(rel), &isNull);
+		char *rolname = pstrdup(NameStr(*DatumGetName(datum)));
 
 		/*
 		 * For each login (except sysadmin and the member of sysadmin), remove

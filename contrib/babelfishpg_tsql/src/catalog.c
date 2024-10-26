@@ -2444,17 +2444,17 @@ get_nspname(HeapTuple tuple, TupleDesc dsc)
 static Datum
 get_login_rolname(HeapTuple tuple, TupleDesc dsc)
 {
-	Form_authid_login_ext authid = ((Form_authid_login_ext) GETSTRUCT(tuple));
+	bool		isNull;
 
-	return NameGetDatum(&(authid->rolname));
+	return heap_getattr(tuple, Anum_bbf_authid_login_ext_rolname, dsc, &isNull);
 }
 
 static Datum
 get_default_database_name(HeapTuple tuple, TupleDesc dsc)
 {
-	Form_authid_login_ext authid = ((Form_authid_login_ext) GETSTRUCT(tuple));
+	bool		isNull;
 
-	return PointerGetDatum(&(authid->default_database_name));
+	return heap_getattr(tuple, Anum_bbf_authid_login_ext_default_database_name, dsc, &isNull);
 }
 
 static Datum
