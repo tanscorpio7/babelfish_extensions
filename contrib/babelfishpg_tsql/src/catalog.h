@@ -107,6 +107,7 @@ extern Oid	get_authid_login_ext_idx_oid(void);
 #define BBF_AUTHID_USER_EXT_IDX_NAME "babelfish_authid_user_ext_pkey"
 #define Anum_bbf_authid_user_ext_rolname				1
 #define Anum_bbf_authid_user_ext_login_name				2
+#define Anum_bbf_authid_user_ext_type					3
 #define Anum_bbf_authid_user_ext_orig_username			11
 #define Anum_bbf_authid_user_ext_database_name			12
 #define Anum_bbf_authid_user_ext_default_schema_name	13
@@ -132,28 +133,6 @@ extern void rename_tsql_db(char *old_db_name, char *new_db_name);
 extern Oid get_login_for_user(Oid user_id, const char *physical_schema_name);
 extern bool user_exists_for_db(const char *db_name, const char *user_name);
 
-/* MUST comply with babelfish_authid_user_ext table */
-typedef struct FormData_authid_user_ext
-{
-	NameData	rolname;
-	NameData	login_name;
-	BpChar		type;
-	int32		owning_principal_id;
-	int32		is_fixed_role;
-	int32		authentication_type;
-	int32		default_language_lcid;
-	int32		allow_encrypted_value_modifications;
-	TimestampTz create_date;
-	TimestampTz modify_date;
-	VarChar		orig_username;
-	VarChar		database_name;
-	VarChar		default_schema_name;
-	VarChar		default_language_name;
-	VarChar		authentication_type_desc;
-	int32		user_can_connect;
-} FormData_authid_user_ext;
-
-typedef FormData_authid_user_ext *Form_authid_user_ext;
 
 /*****************************************
  *			VIEW_DEF

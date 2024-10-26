@@ -573,6 +573,7 @@ babelfish_helpdb(PG_FUNCTION_ARGS)
 	while (HeapTupleIsValid(tuple = systable_getnext(scan)))
 	{
 		Datum		values[7];
+		Datum		datum;
 		bool		nulls[7];
 		Timestamp	tmstmp;
 		char	   *tmstmp_str;
@@ -581,15 +582,16 @@ babelfish_helpdb(PG_FUNCTION_ARGS)
 		MemSet(nulls, 0, sizeof(nulls));
 
 		values[0] = heap_getattr(tuple, Anum_sysdatabases_name,
-				RelationGetDescr(rel), &isNull);
+								 RelationGetDescr(rel), &isNull);
 
 		nulls[1] = true;
 
-		values[2] = heap_getattr(tuple, Anum_sysdatabases_owner,
+		datum = heap_getattr(tuple, Anum_sysdatabases_owner,
 							 RelationGetDescr(rel), &isNull);
+		values[2] = CStringGetTextDatum(NameStr(*DatumGetName(datum)));
 
 		values[3] = heap_getattr(tuple, Anum_sysdatabases_oid,
-							 RelationGetDescr(rel), &isNull);
+								 RelationGetDescr(rel), &isNull);
 
 		tmstmp = DatumGetTimestamp(heap_getattr(tuple, Anum_sysdatabases_crdate,
 												RelationGetDescr(rel), &isNull));
@@ -860,8 +862,10 @@ is_user(Oid role_oid)
 		is_user = false;
 	else
 	{
-		BpChar type = ((Form_authid_user_ext) GETSTRUCT(tuple))->type;
-		char *type_str = bpchar_to_cstring(&type);
+		bool  isNull;
+		Datum datum = SysCacheGetAttr(AUTHIDUSEREXTROLENAME, tuple,
+								Anum_bbf_authid_user_ext_type, &isNull);
+		char *type_str = TextDatumGetCString(datum);
 
 		/*
 		 * Only sysadmin can not be dropped. For the rest of the cases i.e., type
@@ -897,8 +901,10 @@ is_role(Oid role_oid)
 		is_role = false;
 	else
 	{
-		BpChar type = ((Form_authid_user_ext) GETSTRUCT(tuple))->type;
-		char *type_str = bpchar_to_cstring(&type);
+		bool  isNull;
+		Datum datum = SysCacheGetAttr(AUTHIDUSEREXTROLENAME, tuple,
+								Anum_bbf_authid_user_ext_type, &isNull);
+		char *type_str = TextDatumGetCString(datum);
 
 		if (strcmp(type_str, "R") != 0)
 			is_role = false;
@@ -966,10 +972,10 @@ get_authid_user_ext_physical_name(const char *db_name, const char *login)
 	tuple_user_ext = heap_getnext(scan, ForwardScanDirection);
 	if (HeapTupleIsValid(tuple_user_ext))
 	{
-		Form_authid_user_ext userform;
-
-		userform = (Form_authid_user_ext) GETSTRUCT(tuple_user_ext);
-		user_name = pstrdup(NameStr(userform->rolname));
+		bool  isNull;
+		Datum datum = heap_getattr(tuple_user_ext, Anum_bbf_authid_user_ext_rolname,
+								   RelationGetDescr(bbf_authid_user_ext_rel), &isNull);
+		user_name = pstrdup(NameStr(*DatumGetName(datum)));
 	}
 
 	table_endscan(scan);
@@ -1051,11 +1057,11 @@ get_authid_user_ext_db_users(const char *db_name)
 	tuple = heap_getnext(scan, ForwardScanDirection);
 	while (HeapTupleIsValid(tuple))
 	{
-		char	   *user_name;
-		Form_authid_user_ext userform;
+		bool  isNull;
+		Datum datum = heap_getattr(tuple, Anum_bbf_authid_user_ext_rolname,
+								   RelationGetDescr(bbf_authid_user_ext_rel), &isNull);
+		char  *user_name = pstrdup(NameStr(*DatumGetName(datum)));
 
-		userform = (Form_authid_user_ext) GETSTRUCT(tuple);
-		user_name = pstrdup(NameStr(userform->rolname));
 		db_users_list = lappend(db_users_list, user_name);
 		tuple = heap_getnext(scan, ForwardScanDirection);
 	}
@@ -2460,9 +2466,10 @@ get_default_database_name(HeapTuple tuple, TupleDesc dsc)
 static Datum
 get_user_rolname(HeapTuple tuple, TupleDesc dsc)
 {
-	Form_authid_user_ext authid = ((Form_authid_user_ext) GETSTRUCT(tuple));
+	bool  isNull;
 
-	return NameGetDatum(&(authid->rolname));
+	return heap_getattr(tuple, Anum_bbf_authid_user_ext_rolname,
+						dsc, &isNull);
 }
 
 static Datum
@@ -3223,9 +3230,10 @@ get_db_owner_role_name(const char *dbname)
 	tuple_user_ext = heap_getnext(scan, ForwardScanDirection);
 	if (HeapTupleIsValid(tuple_user_ext))
 	{
-		Form_authid_user_ext userform = (Form_authid_user_ext) GETSTRUCT(tuple_user_ext);
-
-		db_owner_role = pstrdup(NameStr(userform->rolname));
+		bool  isNull;
+		Datum datum = heap_getattr(tuple_user_ext, Anum_bbf_authid_user_ext_rolname,
+								   RelationGetDescr(bbf_authid_user_ext_rel), &isNull);
+		db_owner_role = pstrdup(NameStr(*DatumGetName(datum)));
 	}
 
 	table_endscan(scan);
