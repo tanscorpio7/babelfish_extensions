@@ -2354,6 +2354,45 @@ static List
 	return stmt_list;
 }
 
+void
+exec_grant_usage_to_public_on_schema(const char *schema,
+									 const char * queryString,
+									 bool readOnlyTree,
+									 ParamListInfo params,
+									 PlannedStmt *pstmt)
+{
+	const char *grant_query = "GRANT USAGE ON SCHEMA dummy TO public";
+	List	   *res;
+	GrantStmt  *stmt;
+	PlannedStmt *wrapper;
+
+	res = raw_parser(grant_query, RAW_PARSE_DEFAULT);
+
+	Assert(list_length(res) == 1);
+
+	stmt = (GrantStmt *) parsetree_nth_stmt(res, 0);
+	stmt->objects = list_truncate(stmt->objects, 0);
+	stmt->objects = lappend(stmt->objects, makeString(pstrdup(schema)));
+
+	wrapper = makeNode(PlannedStmt);
+	wrapper->commandType = CMD_UTILITY;
+	wrapper->canSetTag = false;
+	wrapper->utilityStmt = (Node *) stmt;
+	wrapper->stmt_location = pstmt->stmt_location;
+	wrapper->stmt_len = pstmt->stmt_len;
+
+	ProcessUtility(wrapper,
+				  queryString,
+				  readOnlyTree,
+				  PROCESS_UTILITY_SUBCOMMAND,
+				  params,
+				  NULL,
+				  None_Receiver,
+				  NULL);
+
+	CommandCounterIncrement();
+}
+
 /*
  * Helper function to execute GRANT on SCHEMA subcommands using
  * ProcessUtility(). Caller should make sure their

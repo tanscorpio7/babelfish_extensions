@@ -56,17 +56,13 @@ typedef struct ComputedColumnContextData
 
 typedef ComputedColumnContextData *ComputedColumnContext;
 
-void		assign_object_access_hook_drop_relation(void);
 void		uninstall_object_access_hook_drop_relation(void);
-static void lookup_and_drop_triggers(ObjectAccessType access, Oid classId,
-									 Oid relOid, int subId, void *arg);
 void		assign_tablecmds_hook(void);
 static void pltsql_PreDropColumnHook(Relation rel, AttrNumber attnum);
 static void pltsql_PreAddConstraintsHook(Relation rel, ParseState *pstate, List *newColDefaults);
 static bool checkAllowedTsqlAttoptions(Node *options);
 
 /* Hook to tablecmds.c in the engine */
-static object_access_hook_type prev_object_access_hook = NULL;
 static InvokePreDropColumnHook_type prev_InvokePreDropColumnHook = NULL;
 static InvokePreAddConstraintsHook_type prev_InvokePreAddConstraintsHook = NULL;
 
@@ -105,83 +101,6 @@ pre_check_trigger_schema(List *object, bool missing_ok)
 							tsql_trigger_logical_schema, depname)));
 		}
 	}
-}
-
-static void
-lookup_and_drop_triggers(ObjectAccessType access, Oid classId,
-						 Oid relOid, int subId, void *arg)
-{
-	Relation	tgrel;
-	ScanKeyData key;
-	SysScanDesc tgscan;
-	HeapTuple	tuple;
-	DropBehavior behavior = DROP_CASCADE;
-	ObjectAddress trigAddress;
-
-	/* Call previous hook if exists */
-	if (prev_object_access_hook)
-		(*prev_object_access_hook) (access, classId, relOid, subId, arg);
-
-	/*
-	 * babelfishpg_tsql extension is loaded does not mean dialect is
-	 * necessarily tsql
-	 */
-	if (sql_dialect != SQL_DIALECT_TSQL)
-		return;
-
-	/* We only want to execute this function for the DROP TABLE case */
-	if (classId != RelationRelationId || access != OAT_DROP)
-		return;
-
-	/*
-	 * If the relation is a table, we must look for triggers and drop them
-	 * when in the tsql dialect because the user does not create a function
-	 * for the trigger - we create it internally, and so the table cannot be
-	 * dropped if there is a tsql trigger on it because of the dependency of
-	 * the function.
-	 */
-	tgrel = table_open(TriggerRelationId, AccessShareLock);
-
-	ScanKeyInit(&key,
-				Anum_pg_trigger_tgrelid,
-				BTEqualStrategyNumber, F_OIDEQ,
-				relOid);
-
-	tgscan = systable_beginscan(tgrel, TriggerRelidNameIndexId, false,
-								NULL, 1, &key);
-
-	while (HeapTupleIsValid(tuple = systable_getnext(tgscan)))
-	{
-		Form_pg_trigger pg_trigger = (Form_pg_trigger) GETSTRUCT(tuple);
-
-		if (pg_trigger->tgrelid == relOid && !pg_trigger->tgisinternal)
-		{
-			trigAddress.classId = TriggerRelationId;
-			trigAddress.objectId = pg_trigger->oid;
-			trigAddress.objectSubId = 0;
-			performDeletion(&trigAddress, behavior, PERFORM_DELETION_INTERNAL);
-		}
-	}
-
-	systable_endscan(tgscan);
-	table_close(tgrel, AccessShareLock);
-}
-
-void
-assign_object_access_hook_drop_relation()
-{
-	if (object_access_hook)
-	{
-		prev_object_access_hook = object_access_hook;
-	}
-	object_access_hook = lookup_and_drop_triggers;
-}
-
-void
-uninstall_object_access_hook_drop_relation()
-{
-	if (prev_object_access_hook)
-		object_access_hook = prev_object_access_hook;
 }
 
 void

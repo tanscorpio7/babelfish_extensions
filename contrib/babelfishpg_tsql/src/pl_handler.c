@@ -117,8 +117,6 @@ static void get_language_procs(const char *langname, Oid *compiler, Oid *validat
 static void get_func_language_oids(Oid *lang_handler, Oid *lang_validator);
 extern bool pltsql_suppress_string_truncation_error();
 static Oid	bbf_table_var_lookup(const char *relname, Oid relnamespace);
-extern void assign_object_access_hook_drop_relation(void);
-extern void uninstall_object_access_hook_drop_relation(void);
 static Oid	pltsql_seq_type_map(Oid typid);
 bool		canCommitTransaction(void);
 extern void assign_tablecmds_hook(void);
@@ -3623,11 +3621,11 @@ bbf_ProcessUtility(PlannedStmt *pstmt,
 				{
 					CreateSchemaStmt *create_schema = (CreateSchemaStmt *) parsetree;
 					const char *orig_schema = NULL;
-					const char *grant_query = "GRANT USAGE ON SCHEMA dummy TO public";
-					List	   *res;
-					GrantStmt  *stmt;
-					PlannedStmt *wrapper;
 					RoleSpec *rolspec = create_schema->authrole;
+
+					/* NULL schema name is a no-op statement */
+					if (create_schema->schemaname == NULL)
+						return;
 
 					if (strcmp(queryString, "(CREATE LOGICAL DATABASE )") == 0
 						&& context == PROCESS_UTILITY_SUBCOMMAND)
@@ -3647,35 +3645,12 @@ bbf_ProcessUtility(PlannedStmt *pstmt,
 
 					add_ns_ext_info(create_schema, queryString, orig_schema);
 
-					res = raw_parser(grant_query, RAW_PARSE_DEFAULT);
+					exec_grant_usage_to_public_on_schema(create_schema->schemaname,
+														 queryString,
+														 readOnlyTree,
+														 params,
+														 pstmt);
 
-					if (list_length(res) != 1)
-						ereport(ERROR,
-								(errcode(ERRCODE_SYNTAX_ERROR),
-								 errmsg("Expected 1 statement, but got %d statements after parsing",
-										list_length(res))));
-
-					stmt = (GrantStmt *) parsetree_nth_stmt(res, 0);
-					stmt->objects = list_truncate(stmt->objects, 0);
-					stmt->objects = lappend(stmt->objects, makeString(pstrdup(create_schema->schemaname)));
-
-					wrapper = makeNode(PlannedStmt);
-					wrapper->commandType = CMD_UTILITY;
-					wrapper->canSetTag = false;
-					wrapper->utilityStmt = (Node *) stmt;
-					wrapper->stmt_location = pstmt->stmt_location;
-					wrapper->stmt_len = pstmt->stmt_len;
-
-					ProcessUtility(wrapper,
-								   queryString,
-								   readOnlyTree,
-								   PROCESS_UTILITY_SUBCOMMAND,
-								   params,
-								   NULL,
-								   None_Receiver,
-								   NULL);
-
-					CommandCounterIncrement();
 					/* Grant ALL schema privileges to the user.*/
 					if (rolspec && strcmp(queryString, "(CREATE LOGICAL DATABASE )") != 0)
 					{
@@ -4739,7 +4714,6 @@ _PG_init(void)
 	init_tsql_cursor_hash_tab(fcinfo);
 	RegisterXactCallback(pltsql_xact_cb, NULL);
 	RegisterSubXactCallback(pltsql_subxact_cb, NULL);
-	assign_object_access_hook_drop_relation();
 	assign_tablecmds_hook();
 	install_backend_gram_hooks();
 	init_catalog(fcinfo);
@@ -4909,7 +4883,6 @@ _PG_fini(void)
 	pltsql_resetcache_hook = prev_pltsql_resetcache_hook;
 	pltsql_setval_hook = prev_pltsql_setval_hook;
 	relname_lookup_hook = prev_relname_lookup_hook;
-	uninstall_object_access_hook_drop_relation();
 	ProcessUtility_hook = prev_ProcessUtility;
 	guc_push_old_value_hook = prev_guc_push_old_value_hook;
 	validate_set_config_function_hook = prev_validate_set_config_function_hook;

@@ -156,6 +156,8 @@ static void fill_missing_values_in_copyfrom(Relation rel, Datum *values, bool *n
 static void pltsql_report_proc_not_found_error(List *names, List *fargs, List *argnames, Oid *input_typeids, int nargs, ParseState *pstate, int location, bool proc_call);
 extern PLtsql_execstate *get_outermost_tsql_estate(int *nestlevel);
 extern PLtsql_execstate *get_current_tsql_estate();
+static void lookup_and_drop_triggers(ObjectAccessType access, Oid classId,
+									 Oid relOid, int subId, void *arg);
 static void pltsql_store_view_definition(const char *queryString, ObjectAddress address);
 static void pltsql_drop_view_definition(Oid objectId);
 static void preserve_view_constraints_from_base_table(ColumnDef *col, Oid tableOid, AttrNumber colId);
@@ -2958,6 +2960,9 @@ bbf_object_access_hook(ObjectAccessType access, Oid classId, Oid objectId, int s
 
 	if (access == OAT_POST_CREATE && classId == ProcedureRelationId)
 		revoke_func_permission_from_public(objectId);
+
+	if (classId == RelationRelationId && access == OAT_DROP)
+		lookup_and_drop_triggers(access, classId, objectId, subId, arg);
 }
 
 static void
@@ -3168,6 +3173,51 @@ pre_transform_insert(ParseState *pstate, InsertStmt *stmt, Query *query)
 
 	if (stmt->withClause)
 		modify_insert_stmt(stmt, RelationGetRelid(pstate->p_target_relation));
+}
+
+static void
+lookup_and_drop_triggers(ObjectAccessType access, Oid classId,
+						 Oid relOid, int subId, void *arg)
+{
+	Relation     	tgrel;
+	ScanKeyData  	key;
+	SysScanDesc  	tgscan;
+	HeapTuple    	tuple;
+	DropBehavior	behavior = DROP_CASCADE;
+	ObjectAddress	trigAddress;
+
+	/*
+	 * If the relation is a table, we must look for triggers and drop them
+	 * when in the tsql dialect because the user does not create a function
+	 * for the trigger - we create it internally, and so the table cannot be
+	 * dropped if there is a tsql trigger on it because of the dependency of
+	 * the function.
+	 */
+	tgrel = table_open(TriggerRelationId, AccessShareLock);
+
+	ScanKeyInit(&key,
+				Anum_pg_trigger_tgrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				relOid);
+
+	tgscan = systable_beginscan(tgrel, TriggerRelidNameIndexId, false,
+								NULL, 1, &key);
+
+	while (HeapTupleIsValid(tuple = systable_getnext(tgscan)))
+	{
+		Form_pg_trigger pg_trigger = (Form_pg_trigger) GETSTRUCT(tuple);
+
+		if (pg_trigger->tgrelid == relOid && !pg_trigger->tgisinternal)
+		{
+			trigAddress.classId = TriggerRelationId;
+			trigAddress.objectId = pg_trigger->oid;
+			trigAddress.objectSubId = 0;
+			performDeletion(&trigAddress, behavior, PERFORM_DELETION_INTERNAL);
+		}
+	}
+
+	systable_endscan(tgscan);
+	table_close(tgrel, AccessShareLock);
 }
 
 /*
