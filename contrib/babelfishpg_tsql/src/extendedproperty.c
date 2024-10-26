@@ -969,7 +969,6 @@ static bool
 get_extended_property_from_tuple(Relation relation, HeapTuple tuple,
 								 Datum *values, bool *nulls, int len)
 {
-	Form_bbf_extended_properties bep;
 	char		*schema_name, *major_name, *minor_name, *type;
 	char		*original_major_name = NULL, *original_minor_name = NULL;
 	Oid			cur_user_id;
@@ -987,8 +986,6 @@ get_extended_property_from_tuple(Relation relation, HeapTuple tuple,
 	/* check if have read-only permission */
 	cur_user_id = GetUserId();
 
-	bep = (Form_bbf_extended_properties) GETSTRUCT(tuple);
-
 	/*
 	 * we must use heap_getattr instead of GETSTRUCT, because type of Varchar
 	 * doesn't have fix length.
@@ -996,7 +993,9 @@ get_extended_property_from_tuple(Relation relation, HeapTuple tuple,
 	datum = heap_getattr(tuple, Anum_bbf_extended_properties_type,
 						 RelationGetDescr(relation), &isnull);
 	type = TextDatumGetCString(datum);
-	schema_name = NameStr(bep->schema_name);
+	datum = heap_getattr(tuple, Anum_bbf_extended_properties_schema_name,
+						 RelationGetDescr(relation), &isnull);
+	schema_name = pstrdup(NameStr(*DatumGetName(datum)));
 
 	if (strcmp(schema_name, "") != 0)
 	{
@@ -1013,7 +1012,9 @@ get_extended_property_from_tuple(Relation relation, HeapTuple tuple,
 			object_aclcheck(NamespaceRelationId, schema_id, cur_user_id, ACL_USAGE | ACL_CREATE) != ACLCHECK_OK)
 			return false;
 
-		major_name = NameStr(bep->major_name);
+		datum = heap_getattr(tuple, Anum_bbf_extended_properties_major_name,
+							 RelationGetDescr(relation), &isnull);
+		major_name = pstrdup(NameStr(*DatumGetName(datum)));
 		if (strcmp(major_name, "") != 0)
 		{
 			/*
@@ -1104,7 +1105,9 @@ get_extended_property_from_tuple(Relation relation, HeapTuple tuple,
 				}
 			}
 
-			minor_name = NameStr(bep->minor_name);
+			datum = heap_getattr(tuple, Anum_bbf_extended_properties_minor_name,
+								 RelationGetDescr(relation), &isnull);
+			minor_name = pstrdup(NameStr(*DatumGetName(datum)));
 			if (strcmp(minor_name, "") != 0)
 			{
 				if (strcmp(type, ExtendedPropertyTypeNames[EXTENDED_PROPERTY_TABLE_COLUMN]) == 0)
@@ -1170,7 +1173,10 @@ get_extended_property_from_tuple(Relation relation, HeapTuple tuple,
 	values[2] = datumCopy(datum, false, -1);
 	datum = heap_getattr(tuple, Anum_bbf_extended_properties_value,
 						 RelationGetDescr(relation), &isnull);
-	values[3] = datumCopy(datum, false, -1);
+	if (!isnull)
+		values[3] = datumCopy(datum, false, -1);
+	else
+		nulls[3] = true;
 
 	return true;
 }

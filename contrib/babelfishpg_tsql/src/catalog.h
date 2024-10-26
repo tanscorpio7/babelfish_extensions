@@ -377,20 +377,6 @@ extern char	*get_partition_scheme_for_partitioned_table(int16 dbid, char *schema
 extern void	rename_table_update_bbf_partition_depend_catalog(RenameStmt *stmt, char *logical_schema_name, int16 dbid);
 
 
-typedef struct FormData_bbf_extended_properties
-{
-	int16		dbid;
-	NameData	schema_name;
-	NameData	major_name;
-	NameData	minor_name;
-	VarChar		type;
-	VarChar		name;
-	VarChar		orig_name;
-	bytea		value;
-} FormData_bbf_extended_properties;
-
-typedef FormData_bbf_extended_properties *Form_bbf_extended_properties;
-
 /*****************************************
  *			Metadata Check Rule
  *****************************************/
