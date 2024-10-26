@@ -269,18 +269,6 @@ extern Oid bbf_schema_perms_idx_oid;
 
 extern Oid get_bbf_schema_perms_oid(void);
 
-typedef struct FormData_bbf_schema_perms
-{
-	int16		dbid;
-	VarChar	schema_name;
-	VarChar	object_name;
-	int32		permission;
-	VarChar	grantee;
-	char	object_type;
-	text	function_args;
-} FormData_bbf_schema_perms;
-
-typedef FormData_bbf_schema_perms *Form_bbf_schema_perms;
 
 extern void add_entry_to_bbf_schema_perms(const char *schema_name, const char *object_name, int permission, const char *grantee, const char *object_type, const char *func_args);
 extern bool privilege_exists_in_bbf_schema_permissions(const char *schema_name, const char *object_name, const char *grantee);
