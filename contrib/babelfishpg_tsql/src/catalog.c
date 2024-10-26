@@ -2390,10 +2390,8 @@ static Datum
 get_owner(HeapTuple tuple, TupleDesc dsc)
 {
 	bool	   isNull;
-	Datum datum = heap_getattr(tuple, Anum_sysdatabases_owner,
-							   dsc, &isNull);
 
-	return datum;
+	return heap_getattr(tuple, Anum_sysdatabases_owner, dsc, &isNull);
 }
 
 static Datum
@@ -2534,9 +2532,11 @@ get_perms_grantee_name(HeapTuple tuple, TupleDesc dsc)
 static Datum
 get_server_name(HeapTuple tuple, TupleDesc dsc)
 {
-	bool	   isNull;
+	bool 	isNull;
+	Datum	datum = heap_getattr(tuple, Anum_bbf_servers_def_servername,
+								 dsc, &isNull);
 
-	return heap_getattr(tuple, Anum_bbf_servers_def_servername, dsc, &isNull);
+	return CStringGetDatum(TextDatumGetCString(datum));
 }
 
 static Datum
