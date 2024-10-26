@@ -393,15 +393,18 @@ get_db_id(const char *dbname)
 {
 	int16		db_id = 0;
 	HeapTuple	tuple;
-	Form_sysdatabases sysdb;
+	Datum   	datum;
+	bool     	isnull;
 
 	tuple = SearchSysCache1(SYSDATABASENAME, CStringGetTextDatum(dbname));
 
 	if (!HeapTupleIsValid(tuple))
 		return InvalidDbid;
 
-	sysdb = ((Form_sysdatabases) GETSTRUCT(tuple));
-	db_id = sysdb->dbid;
+	datum = SysCacheGetAttr(SYSDATABASENAME, tuple, Anum_sysdatabases_oid, &isnull);
+
+	db_id = DatumGetInt16(datum);
+
 	ReleaseSysCache(tuple);
 
 	return db_id;
@@ -483,7 +486,6 @@ babelfish_helpdb(PG_FUNCTION_ARGS)
 	Relation	rel;
 	SysScanDesc scan;
 	HeapTuple	tuple;
-	Form_sysdatabases sysdb;
 	Oid			datetime_output_func;
 	bool		typIsVarlena;
 	Oid			datetime_type;
@@ -572,32 +574,22 @@ babelfish_helpdb(PG_FUNCTION_ARGS)
 	{
 		Datum		values[7];
 		bool		nulls[7];
-		char	   *db_name_entry;
 		Timestamp	tmstmp;
 		char	   *tmstmp_str;
 		bool		isNull;
 
-		sysdb = ((Form_sysdatabases) GETSTRUCT(tuple));
-
 		MemSet(nulls, 0, sizeof(nulls));
 
-		db_name_entry = TextDatumGetCString(heap_getattr(tuple, Anum_sysdatabases_name,
-														 RelationGetDescr(rel), &isNull));
+		values[0] = heap_getattr(tuple, Anum_sysdatabases_name,
+				RelationGetDescr(rel), &isNull);
 
-		values[0] = CStringGetTextDatum(db_name_entry);
+		nulls[1] = true;
 
-		nulls[1] = 1;
+		values[2] = heap_getattr(tuple, Anum_sysdatabases_owner,
+							 RelationGetDescr(rel), &isNull);
 
-		values[2] = CStringGetTextDatum(NameStr(sysdb->owner));
-
-		if (strlen(db_name_entry) == 6 && (strncmp(db_name_entry, "master", 6) == 0))
-			values[3] = 1;
-		else if (strlen(db_name_entry) == 6 && (strncmp(db_name_entry, "tempdb", 6) == 0))
-			values[3] = 2;
-		else if (strlen(db_name_entry) == 4 && (strncmp(db_name_entry, "msdb", 4) == 0))
-			values[3] = 4;
-		else
-			values[3] = sysdb->dbid;
+		values[3] = heap_getattr(tuple, Anum_sysdatabases_oid,
+							 RelationGetDescr(rel), &isNull);
 
 		tmstmp = DatumGetTimestamp(heap_getattr(tuple, Anum_sysdatabases_crdate,
 												RelationGetDescr(rel), &isNull));
@@ -2391,17 +2383,19 @@ get_msdb_db_owner(HeapTuple tuple, TupleDesc dsc)
 static Datum
 get_owner(HeapTuple tuple, TupleDesc dsc)
 {
-	Form_sysdatabases sysdb = ((Form_sysdatabases) GETSTRUCT(tuple));
+	bool	   isNull;
+	Datum datum = heap_getattr(tuple, Anum_sysdatabases_owner,
+							   dsc, &isNull);
 
-	return NameGetDatum(&(sysdb->owner));
+	return datum;
 }
 
 static Datum
 get_name_db_owner(HeapTuple tuple, TupleDesc dsc)
 {
-	Form_sysdatabases sysdb = ((Form_sysdatabases) GETSTRUCT(tuple));
-	const text *name = &(sysdb->name);
-	char	   *name_str = text_to_cstring(name);
+	bool	   isNull;
+	Datum datum = heap_getattr(tuple, Anum_sysdatabases_name, dsc, &isNull);
+	char	   *name_str = TextDatumGetCString(datum);
 	char	   *name_db_owner = palloc0(MAX_BBF_NAMEDATALEND);
 
 	truncate_identifier(name_str, strlen(name_str), false);
@@ -2413,9 +2407,9 @@ get_name_db_owner(HeapTuple tuple, TupleDesc dsc)
 static Datum
 get_name_dbo(HeapTuple tuple, TupleDesc dsc)
 {
-	Form_sysdatabases sysdb = ((Form_sysdatabases) GETSTRUCT(tuple));
-	const text *name = &(sysdb->name);
-	char	   *name_str = text_to_cstring(name);
+	bool	   isNull;
+	Datum datum = heap_getattr(tuple, Anum_sysdatabases_name, dsc, &isNull);
+	char	   *name_str = TextDatumGetCString(datum);
 	char	   *name_dbo = palloc0(MAX_BBF_NAMEDATALEND);
 
 	truncate_identifier(name_str, strlen(name_str), false);
@@ -2427,9 +2421,9 @@ get_name_dbo(HeapTuple tuple, TupleDesc dsc)
 static Datum
 get_name_guest(HeapTuple tuple, TupleDesc dsc)
 {
-	Form_sysdatabases sysdb = ((Form_sysdatabases) GETSTRUCT(tuple));
-	const text *name = &(sysdb->name);
-	char	   *name_str = text_to_cstring(name);
+	bool	   isNull;
+	Datum datum = heap_getattr(tuple, Anum_sysdatabases_name, dsc, &isNull);
+	char	   *name_str = TextDatumGetCString(datum);
 	char	   *name_dbo = palloc0(MAX_BBF_NAMEDATALEND);
 
 	truncate_identifier(name_str, strlen(name_str), false);

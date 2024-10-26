@@ -1773,18 +1773,19 @@ char*
 get_collation_name_for_db(const char* dbname)
 {
 	HeapTuple	tuple;
-	Form_sysdatabases sysdb;
+	Datum datum;
+	bool  isnull;
 	char *collation_name;
 
-	tuple = SearchSysCache1(SYSDATABASENAME, PointerGetDatum(cstring_to_text(dbname)));
+	tuple = SearchSysCache1(SYSDATABASENAME, CStringGetTextDatum(dbname));
 
 	if (!HeapTupleIsValid(tuple))
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_DATABASE),
 					 errmsg("Could not find database: \"%s\"", dbname)));
 
-	sysdb = ((Form_sysdatabases) GETSTRUCT(tuple));
-	collation_name = pstrdup(NameStr(sysdb->default_collation));
+	datum = SysCacheGetAttr(SYSDATABASENAME, tuple, Anum_sysdatabases_oid, &isnull);
+	collation_name = pstrdup(NameStr(*DatumGetName(datum)));
 
 	ReleaseSysCache(tuple);
 	return collation_name;

@@ -645,7 +645,6 @@ drop_bbf_db(const char *dbname, bool missing_ok, bool force_drop)
 {
 	volatile Relation   sysdatabase_rel;
 	HeapTuple           tuple;
-	Form_sysdatabases   bbf_db;
 	int16               dbid;
 	char               *dbo_role;
 	List               *db_users_list;
@@ -669,9 +668,9 @@ drop_bbf_db(const char *dbname, bool missing_ok, bool force_drop)
 	/* Check if the DB exist */
 	sysdatabase_rel = table_open(sysdatabases_oid, RowExclusiveLock);
 
-	tuple = SearchSysCache1(SYSDATABASENAME, CStringGetTextDatum(dbname));
+	dbid = get_db_id(dbname);
 
-	if (!HeapTupleIsValid(tuple))
+	if (!OidIsValid(dbid))
 	{
 		/* Close pg_database, release the lock, since we changed nothing */
 		table_close(sysdatabase_rel, RowExclusiveLock);
@@ -689,9 +688,6 @@ drop_bbf_db(const char *dbname, bool missing_ok, bool force_drop)
 			return;
 		}
 	}
-
-	bbf_db = ((Form_sysdatabases) GETSTRUCT(tuple));
-	dbid = bbf_db->dbid;
 
 	/* Check if the database is in use */
 	if (dbid == get_cur_db_id())
@@ -724,6 +720,7 @@ drop_bbf_db(const char *dbname, bool missing_ok, bool force_drop)
 					 errmsg("Cannot drop database \"%s\" because it is currently in use"
 							" in another session", dbname)));
 
+		tuple = SearchSysCache1(SYSDATABASENAME, CStringGetTextDatum(dbname));
 		CatalogTupleDelete(sysdatabase_rel, &tuple->t_self);
 		ReleaseSysCache(tuple);
 
@@ -1039,7 +1036,8 @@ get_owner_of_db(const char *dbname)
 {
 	char	   *owner = NULL;
 	HeapTuple	tuple;
-	Form_sysdatabases sysdb;
+	Datum    	datum;
+	bool     	isnull;
 
 	tuple = SearchSysCache1(SYSDATABASENAME, CStringGetTextDatum(dbname));
 
@@ -1048,8 +1046,8 @@ get_owner_of_db(const char *dbname)
 				(errcode(ERRCODE_UNDEFINED_DATABASE),
 				 errmsg("database \"%s\" does not exist", dbname)));
 
-	sysdb = ((Form_sysdatabases) GETSTRUCT(tuple));
-	owner = NameStr(sysdb->owner);
+	datum = SysCacheGetAttr(SYSDATABASENAME, tuple, Anum_sysdatabases_owner, &isnull);
+	owner = pstrdup(NameStr(*DatumGetName(datum)));
 	ReleaseSysCache(tuple);
 
 	return owner;
@@ -1172,7 +1170,6 @@ create_guest_schema_for_all_dbs(PG_FUNCTION_ARGS)
 	HeapTuple	tuple;
 	const char *sql_dialect_value_old;
 	const char *tsql_dialect = "tsql";
-	Form_sysdatabases bbf_db;
 	const char *dbname;
 	bool		creating_extension_backup = creating_extension;
 
@@ -1205,10 +1202,12 @@ create_guest_schema_for_all_dbs(PG_FUNCTION_ARGS)
 
 		while (HeapTupleIsValid(tuple))
 		{
-			bbf_db = (Form_sysdatabases) GETSTRUCT(tuple);
-			dbname = text_to_cstring(&(bbf_db->name));
+			bool isnull;
 
-			create_schema_if_not_exists(bbf_db->dbid, dbname, "guest", "guest");
+			dbname = TextDatumGetCString(heap_getattr(tuple, Anum_sysdatabases_name,
+										 RelationGetDescr(sysdatabase_rel), &isnull));
+
+			create_schema_if_not_exists(get_db_id(dbname), dbname, "guest", "guest");
 
 			tuple = heap_getnext(scan, ForwardScanDirection);
 		}
