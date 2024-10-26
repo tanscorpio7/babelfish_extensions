@@ -1784,7 +1784,7 @@ get_collation_name_for_db(const char* dbname)
 					(errcode(ERRCODE_UNDEFINED_DATABASE),
 					 errmsg("Could not find database: \"%s\"", dbname)));
 
-	datum = SysCacheGetAttr(SYSDATABASENAME, tuple, Anum_sysdatabases_oid, &isnull);
+	datum = SysCacheGetAttr(SYSDATABASENAME, tuple, Anum_sysdatabases_default_collation, &isnull);
 	collation_name = pstrdup(NameStr(*DatumGetName(datum)));
 
 	ReleaseSysCache(tuple);

@@ -179,19 +179,6 @@ extern bool check_is_tsql_view(Oid relid);
 extern void clean_up_bbf_view_def(int16 dbid);
 extern void drop_bbf_schema_permission_entries(int16 dbid);
 
-typedef struct FormData_bbf_view_def
-{
-	int16		dbid;
-	VarChar		schema;
-	VarChar		object_name;
-	text		definition;
-	uint64		flag_validity;
-	uint64		flag_values;
-	Timestamp	create_date;
-	Timestamp	modify_date;
-}			FormData_bbf_view_def;
-
-typedef FormData_bbf_view_def * Form_bbf_view_def;
 
 /*****************************************
  *			LINKED_SERVERS_DEF
