@@ -2477,17 +2477,17 @@ get_database_name(HeapTuple tuple, TupleDesc dsc)
 static Datum
 get_function_nspname(HeapTuple tuple, TupleDesc dsc)
 {
-	Form_bbf_function_ext func = ((Form_bbf_function_ext) GETSTRUCT(tuple));
+	bool	isNull;
 
-	return NameGetDatum(&(func->schema));
+	return heap_getattr(tuple, Anum_bbf_function_ext_nspname, dsc, &isNull);
 }
 
 static Datum
 get_function_name(HeapTuple tuple, TupleDesc dsc)
 {
-	Form_bbf_function_ext func = ((Form_bbf_function_ext) GETSTRUCT(tuple));
+	bool	isNull;
 
-	return NameGetDatum(&(func->funcname));
+	return heap_getattr(tuple, Anum_bbf_function_ext_funcname, dsc, &isNull);
 }
 
 static Datum

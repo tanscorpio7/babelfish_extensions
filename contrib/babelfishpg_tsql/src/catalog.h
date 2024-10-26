@@ -267,21 +267,6 @@ extern void clean_up_bbf_function_ext(int16 dbid);
 extern bool is_created_with_recompile(Oid objectId);
 extern bool is_classic_catalog(const char *name);
 
-typedef struct FormData_bbf_function_ext
-{
-	NameData	schema;
-	NameData	funcname;
-	VarChar		orig_name;
-	text		function_signature;
-	text		default_positions;
-	uint64		flag_validity;
-	uint64		flag_values;
-	Timestamp	create_date;
-	Timestamp	modify_date;
-	text		definition;
-} FormData_bbf_function_ext;
-
-typedef FormData_bbf_function_ext *Form_bbf_function_ext;
 
 /*****************************************
  *			SCHEMA_PERMISSIONS
