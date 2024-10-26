@@ -2527,11 +2527,9 @@ get_perms_grantee_name(HeapTuple tuple, TupleDesc dsc)
 static Datum
 get_server_name(HeapTuple tuple, TupleDesc dsc)
 {
-	Form_bbf_servers_def	srv_def = ((Form_bbf_servers_def) GETSTRUCT(tuple));
-	const text 		*srv_name = &(srv_def->servername);
-	char 			*servername = text_to_cstring(srv_name);
+	bool	   isNull;
 
-	return CStringGetDatum(servername);
+	return heap_getattr(tuple, Anum_bbf_servers_def_servername, dsc, &isNull);
 }
 
 static Datum

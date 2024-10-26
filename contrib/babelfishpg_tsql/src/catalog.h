@@ -198,14 +198,6 @@ extern int get_timeout_from_server_name(char *servername, int attnum);
 extern int get_server_id_from_server_name(char *servername);
 extern void clean_up_bbf_server_def(void);
 
-typedef struct FormData_bbf_servers_def
-{
-	text		servername;
-	int32		query_timeout;
-	int32		connect_timeout;
-} FormData_bbf_servers_def;
-
-typedef FormData_bbf_servers_def *Form_bbf_servers_def;
 
 /*****************************************
  *			FUNCTION_EXT
