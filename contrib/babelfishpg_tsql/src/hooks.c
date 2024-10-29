@@ -5631,17 +5631,12 @@ pltsql_get_object_identity_event_trigger(ObjectAddress* address)
     return identity;
 }
 
-/*
- * Create new objects with schema owner as the owner of the
- * object. We only do this when dialect is tsql and we are in
- * a tds connection and the schema is a babelfish schema and
- * current user is a member of the schema owner
- */
 static Oid
 pltsql_get_object_owner(Oid namespaceId, Oid ownerId)
 {
-	HeapTuple tuple;
-	Form_pg_namespace nsptup;
+	HeapTuple          tuple;
+	Form_pg_namespace  nsptup;
+	const char         *logical_schema_name;
 
 	Assert(OidIsValid(namespaceId));
 
@@ -5654,9 +5649,27 @@ pltsql_get_object_owner(Oid namespaceId, Oid ownerId)
 	tuple = SearchSysCache1(NAMESPACEOID, ObjectIdGetDatum(namespaceId));
 	nsptup = (Form_pg_namespace) GETSTRUCT(tuple);
 
-	if (SearchSysCacheExists1(SYSNAMESPACENAME, NameGetDatum(&(nsptup->nspname))))
+	logical_schema_name = get_logical_schema_name(NameStr(nsptup->nspname), true);
+
+	if (logical_schema_name)
 	{
-		ownerId = has_privs_of_role(ownerId, nsptup->nspowner) ? nsptup->nspowner : ownerId;
+		Oid		nsp_owner;
+		char	*db_name = get_cur_db_name();
+		char	*dbo_name = get_dbo_role_name(db_name);
+
+		/*
+		 * babelfish issue special handing for dbo schema since it is
+		 * owned by db_owner but the correct owner should have been dbo
+		 */
+		if (strcmp(logical_schema_name, "dbo") == 0)
+			nsp_owner = get_role_oid(dbo_name, false);
+		else
+			nsp_owner = nsptup->nspowner;
+
+		ownerId = has_privs_of_role(ownerId, nsp_owner) ? nsp_owner : ownerId;
+
+		pfree(db_name);
+		pfree(dbo_name);
 	}
 	ReleaseSysCache(tuple);
 
