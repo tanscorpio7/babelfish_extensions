@@ -5640,7 +5640,7 @@ pltsql_get_object_owner(Oid namespaceId, Oid ownerId)
 
 	Assert(OidIsValid(namespaceId));
 
-	if (sql_dialect != SQL_DIALECT_TSQL && !IS_TDS_CONN())
+	if (sql_dialect != SQL_DIALECT_TSQL || !IS_TDS_CONN())
 		return ownerId;
 
 	if (!OidIsValid(ownerId))
