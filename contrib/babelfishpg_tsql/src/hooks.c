@@ -5631,23 +5631,32 @@ pltsql_get_object_identity_event_trigger(ObjectAddress* address)
     return identity;
 }
 
+/*
+ * Create new objects with schema owner as the owner of the
+ * object. We only do this when dialect is tsql and we are in
+ * a tds connection and the schema is a babelfish schema and
+ * current user is a member of the schema owner
+ */
 static Oid
 pltsql_get_object_owner(Oid namespaceId, Oid ownerId)
 {
 	HeapTuple tuple;
 	Form_pg_namespace nsptup;
 
-	Assert(OidIsValid(namespaceId) && OidIsValid(ownerId));
+	Assert(OidIsValid(namespaceId));
 
 	if (sql_dialect != SQL_DIALECT_TSQL && !IS_TDS_CONN())
 		return ownerId;
+
+	if (!OidIsValid(ownerId))
+		ownerId = GetUserId();
 
 	tuple = SearchSysCache1(NAMESPACEOID, ObjectIdGetDatum(namespaceId));
 	nsptup = (Form_pg_namespace) GETSTRUCT(tuple);
 
 	if (SearchSysCacheExists1(SYSNAMESPACENAME, NameGetDatum(&(nsptup->nspname))))
 	{
-		ownerId = nsptup->nspowner;
+		ownerId = has_privs_of_role(ownerId, nsptup->nspowner) ? nsptup->nspowner : ownerId;
 	}
 	ReleaseSysCache(tuple);
 
