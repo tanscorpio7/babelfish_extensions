@@ -209,6 +209,7 @@ static object_access_hook_type prev_object_access_hook = NULL;
 static void bbf_object_access_hook(ObjectAccessType access, Oid classId, Oid objectId, int subId, void *arg);
 static void revoke_func_permission_from_public(Oid objectId);
 static bool is_partitioned_table_reloptions_allowed(Datum reloptions);
+static Oid pltsql_get_object_owner(Oid namespaceId, Oid ownerId);
 
 /*****************************************
  * 			Planner Hook
@@ -497,6 +498,8 @@ InstallExtendedHooks(void)
 	ExecFuncProc_AclCheck_hook = pltsql_ExecFuncProc_AclCheck;
 	
 	pltsql_get_object_identity_event_trigger_hook = pltsql_get_object_identity_event_trigger;
+
+	pltsql_get_object_owner_hook = pltsql_get_object_owner;
 }
 
 void
@@ -571,6 +574,7 @@ UninstallExtendedHooks(void)
 	handle_param_collation_hook = NULL;
 	handle_default_collation_hook = NULL;
 	pltsql_get_object_identity_event_trigger_hook = NULL;
+	pltsql_get_object_owner_hook = NULL;
 }
 
 /*****************************************
@@ -5625,4 +5629,27 @@ pltsql_get_object_identity_event_trigger(ObjectAddress* address)
         identity = getObjectIdentity(address,true); 
     }
     return identity;
+}
+
+static Oid
+pltsql_get_object_owner(Oid namespaceId, Oid ownerId)
+{
+	HeapTuple tuple;
+	Form_pg_namespace nsptup;
+
+	Assert(OidIsValid(namespaceId) && OidIsValid(ownerId));
+
+	if (sql_dialect != SQL_DIALECT_TSQL && !IS_TDS_CONN())
+		return ownerId;
+
+	tuple = SearchSysCache1(NAMESPACEOID, ObjectIdGetDatum(namespaceId));
+	nsptup = (Form_pg_namespace) GETSTRUCT(tuple);
+
+	if (SearchSysCacheExists1(SYSNAMESPACENAME, NameGetDatum(&(nsptup->nspname))))
+	{
+		ownerId = nsptup->nspowner;
+	}
+	ReleaseSysCache(tuple);
+
+	return ownerId;
 }
