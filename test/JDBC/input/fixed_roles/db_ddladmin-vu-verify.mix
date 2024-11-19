@@ -1,7 +1,7 @@
 -- single_db_mode_expected
 -- tsql
 -- RESET LOGIN PASSWORD
-SELECT CAST(r.rolname AS CHAR(30)), CAST(object_name(objid) AS char(22)), deptype FROM pg_shdepend d
+SELECT CAST(r.rolname AS CHAR(30)), CAST(object_name(objid) AS char(22)), d.objid, d.classid, d.objsubid, d.deptype, d.refobjid FROM pg_shdepend d
     JOIN pg_roles r ON (d.refobjid = r.oid)
     WHERE
         object_name(objid) LIKE 'babel_5116%' AND
@@ -455,8 +455,10 @@ SELECT * FROM sys.babelfish_sysdatabases;
 GO
 SELECT * FROM pg_class WHERE relname = 'babel_5116_v1'
 GO
+SELECT * FROM pg_roles WHERE rolname IN ('ad_db_db_ddladmin','alter_db_db_ddladmin')
+GO
 
-SELECT CAST(r.rolname AS CHAR(30)), CAST(object_name(objid) AS char(22)), deptype FROM pg_shdepend d
+SELECT CAST(r.rolname AS CHAR(30)), CAST(object_name(objid) AS char(22)), d.objid, d.classid, d.objsubid, d.deptype, d.refobjid FROM pg_shdepend d
     JOIN pg_roles r ON (d.refobjid = r.oid)
     WHERE
         object_name(objid) LIKE 'babel_5116%' AND
