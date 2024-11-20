@@ -19,7 +19,7 @@ inputs:
   release_mode:
     description: 'Build in Release Mode'
     required: no
-    default: yes
+    default: no
 
 runs:
   using: "composite"
