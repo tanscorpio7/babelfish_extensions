@@ -70,7 +70,7 @@ jobs:
 
       - name: Setup Upgrade Version Composite Action
         id: setup-upgrade-ver-ca
-        if: always() && steps.install-yq.outcome == 'success' && steps.setup-base-version.outcome == 'success'
+        if: always() && steps.install-yq.outcome == 'success'
         uses: ./.github/composite-actions/setup-upgrade-version-ca
         with: 
           base_version: ${{ steps.read-base-and-final-version.outputs.base-version }}

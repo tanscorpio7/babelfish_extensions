@@ -124,3 +124,6 @@ GO
 
 CREATE TYPE dbo.MyUDT FROM image;
 GO
+
+SELECT * FROM pg_namespace
+GO
