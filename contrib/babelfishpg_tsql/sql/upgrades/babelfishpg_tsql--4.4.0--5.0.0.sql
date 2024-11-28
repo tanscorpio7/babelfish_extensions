@@ -182,11 +182,19 @@ CREATE OR REPLACE VIEW information_schema_tsql.table_constraints AS
 
 GRANT SELECT ON information_schema_tsql.table_constraints TO PUBLIC;
 
+-- At this point, there will be only one server role which is sysadmin.
+UPDATE sys.babelfish_authid_login_ext SET is_fixed_role = 1 WHERE rolname = 'sysadmin';
+
+-- At this point, there will be only one database fixed role which is db_owner.
+UPDATE sys.babelfish_authid_user_ext SET is_fixed_role = 1 WHERE orig_username = 'db_owner';
+UPDATE sys.babelfish_authid_user_ext SET is_fixed_role = 0 WHERE orig_username != 'db_owner';
+
 CREATE OR REPLACE PROCEDURE sys.create_db_roles_during_upgrade()
 LANGUAGE C
 AS 'babelfishpg_tsql', 'create_db_roles_during_upgrade';
 CALL sys.create_db_roles_during_upgrade();
 DROP PROCEDURE sys.create_db_roles_during_upgrade();
+
 DO
 LANGUAGE plpgsql
 $$
@@ -212,6 +220,7 @@ $$;
 CREATE OR REPLACE FUNCTION sys.bbf_is_member_of_role_nosuper(OID, OID)
 RETURNS BOOLEAN AS 'babelfishpg_tsql', 'bbf_is_member_of_role_nosuper'
 LANGUAGE C STABLE STRICT PARALLEL SAFE;
+
 -- SERVER_PRINCIPALS
 CREATE OR REPLACE VIEW sys.server_principals
 AS SELECT
@@ -234,7 +243,7 @@ CAST(CASE WHEN Ext.type = 'R' THEN NULL ELSE Ext.default_database_name END AS SY
 CAST(Ext.default_language_name AS SYS.SYSNAME) AS default_language_name,
 CAST(CASE WHEN Ext.type = 'R' THEN NULL ELSE Ext.credential_id END AS INT) AS credential_id,
 CAST(CASE WHEN Ext.type = 'R' THEN 1 ELSE Ext.owning_principal_id END AS INT) AS owning_principal_id,
-CAST(CASE WHEN Ext.type = 'R' THEN 1 ELSE Ext.is_fixed_role END AS sys.BIT) AS is_fixed_role
+CAST(Ext.is_fixed_role AS sys.BIT) AS is_fixed_role
 FROM pg_catalog.pg_roles AS Base INNER JOIN sys.babelfish_authid_login_ext AS Ext ON Base.rolname = Ext.rolname
 WHERE (pg_has_role(suser_id(), 'sysadmin'::TEXT, 'MEMBER') 
   OR pg_has_role(suser_id(), 'securityadmin'::TEXT, 'MEMBER')
@@ -258,6 +267,7 @@ CAST(NULL AS INT) AS credential_id,
 CAST(1 AS INT) AS owning_principal_id,
 CAST(0 AS sys.BIT) AS is_fixed_role;
 GRANT SELECT ON sys.server_principals TO PUBLIC;
+
 -- login_token
 CREATE OR REPLACE VIEW sys.login_token
 AS SELECT
