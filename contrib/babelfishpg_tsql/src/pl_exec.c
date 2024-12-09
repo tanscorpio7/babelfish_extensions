@@ -4622,6 +4622,7 @@ exec_stmt_execsql(PLtsql_execstate *estate,
 	bool		fmtonly_enabled = true;
 	CmdType		cmd = CMD_UNKNOWN;
 	bool		enable_txn_in_triggers = !pltsql_disable_txn_in_triggers;
+	bool		support_tsql_trans = pltsql_support_tsql_transactions();
 	StringInfoData query;
 	bool		need_path_reset = false;
 	char	   *cur_dbname = get_cur_db_name();
@@ -4799,7 +4800,7 @@ exec_stmt_execsql(PLtsql_execstate *estate,
 			/* Open nesting level in engine */
 			BeginCompositeTriggers(CurrentMemoryContext);
 			/* TSQL commands must run inside an explicit transaction */
-			if (!pltsql_disable_batch_auto_commit && pltsql_support_tsql_transactions() &&
+			if (!pltsql_disable_batch_auto_commit && support_tsql_trans &&
 				stmt->txn_data == NULL && !IsTransactionBlockActive())
 			{
 				MemoryContext oldCxt = CurrentMemoryContext;
@@ -4825,7 +4826,7 @@ exec_stmt_execsql(PLtsql_execstate *estate,
 										  portal, expr, cmd, paramLI);
 		else if (stmt->need_to_push_result)
 			rc = execute_plan_and_push_result(estate, expr, paramLI);
-		else if (stmt->txn_data != NULL && !pltsql_support_tsql_transactions())
+		else if (stmt->txn_data != NULL && !support_tsql_trans)
 		{
 			elog(DEBUG2, "TSQL TXN Execute transaction command with PG semantics");
 			rc = execute_txn_command(estate, stmt);
@@ -5058,7 +5059,7 @@ exec_stmt_execsql(PLtsql_execstate *estate,
 		 */
 		/* TODO To let procedure call from PSQL work with old semantics */
 		if ((!pltsql_disable_batch_auto_commit || (stmt->txn_data != NULL)) &&
-			pltsql_support_tsql_transactions() &&
+			support_tsql_trans &&
 			(enable_txn_in_triggers || estate->trigdata == NULL) &&
 			!ro_func && !estate->insert_exec)
 		{
