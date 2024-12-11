@@ -1036,9 +1036,10 @@ pltsql_exec_trigger(PLtsql_function *func,
 	PLtsql_rec *rec_new,
 			   *rec_old;
 	HeapTuple	rettup;
+	bool     	support_tsql_trans = pltsql_support_tsql_transactions();
 
 	/* Check if this trigger is called as part of any of postgres' function, procedure or trigger. */
-	if (!pltsql_support_tsql_transactions())
+	if (!support_tsql_trans)
 	{
 		ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
@@ -1050,7 +1051,7 @@ pltsql_exec_trigger(PLtsql_function *func,
 	 */
 	pltsql_estate_setup(&estate, func, NULL, NULL);
 
-	if (pltsql_support_tsql_transactions() && !pltsql_disable_txn_in_triggers)
+	if (support_tsql_trans && !pltsql_disable_txn_in_triggers)
 		estate.atomic = false;
 
 	estate.trigdata = trigdata;
@@ -1173,7 +1174,7 @@ pltsql_exec_trigger(PLtsql_function *func,
 		 * TSQL triggers terminate if there is no transaction active at the
 		 * end
 		 */
-		if (pltsql_support_tsql_transactions() && !pltsql_disable_txn_in_triggers && NestedTranCount == 0)
+		if (support_tsql_trans && !pltsql_disable_txn_in_triggers && NestedTranCount == 0)
 			ereport(ERROR,
 					(errcode(ERRCODE_S_R_E_FUNCTION_EXECUTED_NO_RETURN_STATEMENT),
 					 errmsg("The transaction ended in the trigger. The batch has been aborted.")));
@@ -1181,7 +1182,7 @@ pltsql_exec_trigger(PLtsql_function *func,
 		/*
 		 * If an error was encountered when executing trigger.
 		 */
-		if (pltsql_support_tsql_transactions() && !pltsql_disable_txn_in_triggers && exec_state_call_stack->error_data.trigger_error)
+		if (support_tsql_trans && !pltsql_disable_txn_in_triggers && exec_state_call_stack->error_data.trigger_error)
 			ereport(ERROR,
 					(errcode(ERRCODE_TRIGGERED_ACTION_EXCEPTION),
 					 errmsg("An error was raised during trigger execution. The batch has been aborted and the user transaction, if any, has been rolled back.")));
