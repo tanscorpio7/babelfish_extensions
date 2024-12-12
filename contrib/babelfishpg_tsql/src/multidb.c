@@ -1648,9 +1648,12 @@ truncate_tsql_identifier(char *ident)
 void
 rewrite_call_stmt(CallStmt *callstmt)
 {
-	PLExecStateCallStack *top_es_entry = exec_state_call_stack->next;
-	List* name = callstmt->funccall->funcname;
-	char *dbname = NULL;
+	PLExecStateCallStack *top_es_entry = NULL;
+	List*                name;
+	char                 *dbname = NULL;
+
+	if (exec_state_call_stack)
+		top_es_entry = exec_state_call_stack->next;
 
 	while (top_es_entry != NULL)
 	{
@@ -1666,6 +1669,8 @@ rewrite_call_stmt(CallStmt *callstmt)
 
 	if (!dbname)
 		return;
+
+	name = callstmt->funccall->funcname;
 
 	switch (list_length(name))
 	{
