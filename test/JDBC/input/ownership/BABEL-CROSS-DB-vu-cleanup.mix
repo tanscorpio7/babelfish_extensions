@@ -140,3 +140,8 @@ GO
 
 DROP SCHEMA babel_cross_db_vu_prepare_myschema
 GO
+
+DROP DATABASE babel_5448_db2
+GO
+DROP DATABASE babel_5448_db1
+GO

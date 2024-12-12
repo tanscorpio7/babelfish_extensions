@@ -31,6 +31,7 @@ static void rewrite_plain_name_list(List *names);	/* list of plan names */
 static void rewrite_schema_name_list(List *schemas);	/* list of schema names */
 static void rewrite_type_name_list(List *typenames);	/* list of type names */
 static void rewrite_role_list(List *rolespecs); /* list of RoleSpecs */
+static void rewrite_call_stmt(CallStmt *stmt);
 
 static bool rewrite_relation_walker(Node *node, void *context);
 
@@ -632,6 +633,8 @@ rewrite_object_refs(Node *stmt)
 		case T_CallStmt:
 			{
 				CallStmt   *call = (CallStmt *) stmt;
+
+				rewrite_call_stmt(call);
 
 				call->funccall->funcname = rewrite_plain_name(call->funccall->funcname);
 				break;
@@ -1640,4 +1643,51 @@ truncate_tsql_identifier(char *ident)
 					  GUC_CONTEXT_CONFIG,
 					  PGC_S_SESSION, GUC_ACTION_SAVE, true, 0, false);
 
+}
+
+void
+rewrite_call_stmt(CallStmt *callstmt)
+{
+	PLExecStateCallStack *top_es_entry = exec_state_call_stack->next;
+	List* name = callstmt->funccall->funcname;
+	char *dbname = NULL;
+
+	while (top_es_entry != NULL)
+	{
+		if (top_es_entry->estate && top_es_entry->estate->err_stmt &&
+			top_es_entry->estate->err_stmt->cmd_type == PLTSQL_STMT_EXEC &&
+			top_es_entry->estate->db_name != NULL)
+		{
+			dbname = pstrdup(top_es_entry->estate->db_name);
+			break;
+		}
+		top_es_entry = top_es_entry->next;
+	}
+
+	if (!dbname)
+		return;
+
+	switch (list_length(name))
+	{
+		case 2:
+			{
+				Node	   *schema = (Node *) linitial(name);
+
+				if (is_shared_schema(strVal(schema)))
+					break;		/* do nothing for shared schemas */
+
+				name = lcons(makeString(dbname), name);
+				break;
+			}
+		case 1:
+			{
+				name = lcons(makeString(DBO), name);
+				name = lcons(makeString(dbname), name);
+				break;
+			}
+		default:
+			break;
+	}
+
+	callstmt->funccall->funcname = name;
 }

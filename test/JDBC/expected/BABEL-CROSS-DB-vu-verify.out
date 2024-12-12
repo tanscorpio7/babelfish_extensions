@@ -796,3 +796,29 @@ int
 -- tsql
 USE master
 GO
+
+USE babel_5448_db2;
+GO
+
+EXECUTE dbo.babel_5448_p3;
+GO
+~~START~~
+varchar
+This is correct: babel_5448_db1.dbo.babel_5448_p1
+~~END~~
+
+~~START~~
+varchar
+This is correct: babel_5448_db1.dbo.babel_5448_p1
+~~END~~
+
+~~START~~
+varchar
+This is correct: babel_5448_db1.dbo.babel_5448_p1
+~~END~~
+
+~~START~~
+varchar
+This is correct: babel_5448_db1.dbo.babel_5448_p1
+~~END~~
+

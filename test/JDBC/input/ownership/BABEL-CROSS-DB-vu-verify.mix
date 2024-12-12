@@ -434,3 +434,9 @@ GO
 -- tsql
 USE master
 GO
+
+USE babel_5448_db2;
+GO
+
+EXECUTE dbo.babel_5448_p3;
+GO
