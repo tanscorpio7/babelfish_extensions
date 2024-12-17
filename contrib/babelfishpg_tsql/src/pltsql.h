@@ -1168,10 +1168,8 @@ typedef struct PLtsql_stmt_execsql
 	bool		is_cross_db;	/* cross database reference */
 	bool		is_dml;			/* DML statement? */
 	bool		is_ddl;			/* DDL statement? */
-	bool		func_call;		/* Function call? */
 	char	   *schema_name;	/* Schema specified */
 	char	   *db_name;		/* db_name: only for cross db query */
-	bool		is_schema_specified;	/* is schema name specified? */
 	bool		is_create_view; /* CREATE VIEW? */
 	bool		is_set_tran_isolation; /* SET TRANSACTION ISOLATION? */
 	char	   *original_query; /* Only for batch level statement. */

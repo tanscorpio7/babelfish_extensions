@@ -4654,10 +4654,6 @@ exec_stmt_execsql(PLtsql_execstate *estate,
 	}
 	if (stmt->is_dml || stmt->is_ddl || stmt->is_create_view)
 	{
-		if (stmt->is_schema_specified)
-			estate->schema_name = stmt->schema_name;
-		else
-			estate->schema_name = NULL;
 		if (estate->trigdata)
 			inside_trigger = true;
 		need_path_reset = reset_search_path(stmt, &old_search_path, &reset_session_properties, inside_trigger);
@@ -10252,31 +10248,13 @@ reset_search_path(PLtsql_stmt_execsql *stmt, char **old_search_path, bool *reset
 			{
 				if (top_es_entry->estate->db_name == NULL)
 				{
-					/*
-					 * Don't change the search path, if the statement inside
-					 * the procedure is a function or schema qualified.
-					 */
-					if (stmt->func_call || stmt->is_schema_specified)
-						break;
-					else
-					{
-						physical_schema = get_physical_schema_name(cur_dbname, top_es_entry->estate->schema_name);
-						dbo_schema = get_dbo_schema_name(cur_dbname);
-					}
+					physical_schema = get_physical_schema_name(cur_dbname, top_es_entry->estate->schema_name);
+					dbo_schema = get_dbo_schema_name(cur_dbname);
 				}
 				else
 				{
-					if (stmt->func_call || stmt->is_schema_specified)
-					{
-						set_session_properties(top_es_entry->estate->db_name);
-						*reset_session_properties = true;
-						break;
-					}
-					else
-					{
-						physical_schema = get_physical_schema_name((char *) top_es_entry->estate->db_name, top_es_entry->estate->schema_name);
-						dbo_schema = get_dbo_schema_name(top_es_entry->estate->db_name);
-					}
+					physical_schema = get_physical_schema_name((char *) top_es_entry->estate->db_name, top_es_entry->estate->schema_name);
+					dbo_schema = get_dbo_schema_name(top_es_entry->estate->db_name);
 				}
 				if (!*old_search_path)
 				{
@@ -10326,7 +10304,7 @@ reset_search_path(PLtsql_stmt_execsql *stmt, char **old_search_path, bool *reset
 				 * If the object in the stmt is schema qualified or it's a ddl
 				 * we don't need to update the searh path.
 				 */
-				if (stmt->is_schema_specified || stmt->is_ddl)
+				if (stmt->is_ddl)
 					return false;
 				else
 				{

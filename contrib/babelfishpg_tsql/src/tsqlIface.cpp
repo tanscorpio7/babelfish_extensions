@@ -1420,8 +1420,6 @@ public:
 	bool is_cross_db = false;
 	std::string schema_name;
 	std::string db_name;
-	bool is_function = false;
-	bool is_schema_specified = false;	
 	bool in_func_body_return_select_body = false;	
 	
 	// We keep a stack of the containers that are active during a traversal.
@@ -1920,18 +1918,12 @@ public:
 			stmt->is_cross_db = true;
 		// record that the stmt is dml
 	 	stmt->is_dml = true;
-		// record if a function call
-		if (is_function)
-			stmt->func_call = true;
 
 		if (!schema_name.empty())
 			stmt->schema_name = pstrdup(downcase_truncate_identifier(schema_name.c_str(), schema_name.length(), true));
 		// record db name for the cross db query
 		if (!db_name.empty())
 			stmt->db_name = pstrdup(downcase_truncate_identifier(db_name.c_str(), db_name.length(), true));
-		// record if the SQL object is schema qualified
-		if (is_schema_specified)
-			stmt->is_schema_specified = true;
 
 		if (is_compiling_create_function())
 		{
@@ -2666,10 +2658,7 @@ public:
 		if (ctx && (ctx->DOT().size() <= 2) && ctx->schema)
 		{
 			schema_name = stripQuoteFromId(ctx->schema);
-			is_schema_specified = true;
 		}
-		else
-			is_schema_specified = false;
 
 		// The flag setSysSchema is used exclusively in case of rewriting a cross-DB catalog reference
 		// that uses 'dbo' as schema: this puts 'sys' in tsqlBuilder::schema_name, which ends up
@@ -2739,7 +2728,6 @@ public:
 
 	void exitFunction_call(TSqlParser::Function_callContext *ctx) override
 	{
-		is_function = true;
 		if (ctx->NEXT() && ctx->full_object_name())
 		{
 			TSqlParser::Full_object_nameContext *fctx = (TSqlParser::Full_object_nameContext *) ctx->full_object_name();
